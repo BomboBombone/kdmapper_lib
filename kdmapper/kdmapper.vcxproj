@@ -18,16 +18,16 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>false</SpectreMitigation>
@@ -53,6 +53,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <TreatWarningAsError>false</TreatWarningAsError>
+      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
@@ -70,6 +71,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -79,21 +81,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="intel_driver.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="kdmapper.cpp" />
-    <ClCompile Include="portable_executable.cpp" />
-    <ClCompile Include="service.cpp" />
-    <ClCompile Include="utils.cpp" />
+    <ClCompile Include="src\intel_driver.cpp" />
+    <ClCompile Include="src\kdmapper.cpp" />
+    <ClCompile Include="src\portable_executable.cpp" />
+    <ClCompile Include="src\service.cpp" />
+    <ClCompile Include="src\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="intel_driver.hpp" />
-    <ClInclude Include="intel_driver_resource.hpp" />
-    <ClInclude Include="kdmapper.hpp" />
-    <ClInclude Include="nt.hpp" />
-    <ClInclude Include="portable_executable.hpp" />
-    <ClInclude Include="service.hpp" />
-    <ClInclude Include="utils.hpp" />
+    <ClInclude Include="include\intel_driver.hpp" />
+    <ClInclude Include="include\intel_driver_resource.hpp" />
+    <ClInclude Include="include\kdmapper.hpp" />
+    <ClInclude Include="include\nt.hpp" />
+    <ClInclude Include="include\portable_executable.hpp" />
+    <ClInclude Include="include\service.hpp" />
+    <ClInclude Include="include\utils.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
