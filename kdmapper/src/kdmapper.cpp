@@ -129,7 +129,7 @@ uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, intel_d
 		return 0;
 	}
 
-	uint32_t image_size = nt_headers->OptionalHeader.SizeOfImage;
+	uint64_t image_size = nt_headers->OptionalHeader.SizeOfImage;
 
 	void* local_image_base = VirtualAlloc(nullptr, image_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	if (!local_image_base)
@@ -160,8 +160,8 @@ uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, intel_d
 	}
 	case intel_driver::ALLOCATION_TYPE::LargeContinuous:
 	{
-		size_t pagesToAlloc = image_size / PAGE_2MB_SIZE;
-		pagesToAlloc += image_size % PAGE_2MB_SIZE ? 1 : 0;
+		size_t pagesToAlloc = image_size >> PAGE_2MB_SHIFT;
+		pagesToAlloc += ADDRMASK_EPT_PML2_OFFSET(image_size) ? 1 : 0;
 
 		LARGE_INTEGER minAddress = { 0 };
 		LARGE_INTEGER maxAddress = { 0 };

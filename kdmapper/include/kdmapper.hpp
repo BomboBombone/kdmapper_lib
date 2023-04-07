@@ -13,6 +13,9 @@
 
 #define PAGE_SIZE 0x1000
 #define PAGE_2MB_SIZE PAGE_SIZE * 512
+#define PAGE_2MB_SHIFT 22ull
+#define PAGE_ALIGN_2MB(_VAR_) (((DWORD64)_VAR_) & 0xFFFFFFFFFFE00000ULL)
+#define ADDRMASK_EPT_PML2_OFFSET(_VAR_) (((DWORD64)_VAR_) & 0x3FFFFFULL)
 
 namespace kdmapper
 {

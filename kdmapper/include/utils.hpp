@@ -1,11 +1,6 @@
 #pragma once
 
-#if defined(_DEBUG)
-	#define Log(content, ...) DbgPrint(content "\n", __VA_ARGS__)
-#else
-	#define Log(content, ...) 
-#endif
-
+#define Log(content, ...) printf(content "\n", __VA_ARGS__)
 
 #include <Windows.h>
 #include <TlHelp32.h>
