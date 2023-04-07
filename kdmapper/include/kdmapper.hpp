@@ -21,6 +21,7 @@ namespace kdmapper
 	bool Init();
 	void Dispose();
 
+	HANDLE IntelHandle();
 	//Note: if you set PassAllocationAddressAsFirstParam as true, param1 will be ignored
 	uint64_t MapDriver(std::wstring driverName, ULONG64 param1 = 0, ULONG64 param2 = 0, intel_driver::ALLOCATION_TYPE allocType = intel_driver::ALLOCATION_TYPE::LargeContinuous, bool free = false, bool destroyHeader = true, bool PassAllocationAddressAsFirstParam = false, mapCallback callback = nullptr, NTSTATUS* exitCode = nullptr);
 	uint64_t MapDriver(BYTE* data, ULONG64 param1 = 0, ULONG64 param2 = 0, intel_driver::ALLOCATION_TYPE allocType = intel_driver::ALLOCATION_TYPE::LargeContinuous, bool free = false, bool destroyHeader = true, bool PassAllocationAddressAsFirstParam = false, mapCallback callback = nullptr, NTSTATUS* exitCode = nullptr);

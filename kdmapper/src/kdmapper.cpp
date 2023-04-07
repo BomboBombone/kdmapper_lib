@@ -6,6 +6,10 @@ bool bInit = false;
 void RelocateImageByDelta(portable_executable::vec_relocs relocs, const uint64_t delta);
 bool ResolveImports(portable_executable::vec_imports imports);
 
+HANDLE kdmapper::IntelHandle() {
+	return iqvw64e_device_handle;
+}
+
 LONG WINAPI SimplestCrashHandler(EXCEPTION_POINTERS* ExceptionInfo)
 {
 	if (ExceptionInfo && ExceptionInfo->ExceptionRecord)
