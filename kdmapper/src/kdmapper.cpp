@@ -93,7 +93,7 @@ void kdmapper::Dispose()
 		intel_driver::Unload(iqvw64e_device_handle);
 }
 
-uint64_t kdmapper::MapDriver(std::wstring driverName, ULONG64 param1, ULONG64 param2, bool free, bool destroyHeader, bool mdlMode, bool PassAllocationAddressAsFirstParam, mapCallback callback, NTSTATUS* exitCode)
+uint64_t kdmapper::MapDriver(std::wstring driverName, ULONG64 param1, ULONG64 param2, intel_driver::ALLOCATION_TYPE allocType, bool free, bool destroyHeader, bool PassAllocationAddressAsFirstParam, mapCallback callback, NTSTATUS* exitCode)
 {
 	if (!std::filesystem::exists(driverName)) {
 		Log("[-] File %ls doesn't exist", driverName);
@@ -107,10 +107,10 @@ uint64_t kdmapper::MapDriver(std::wstring driverName, ULONG64 param1, ULONG64 pa
 		return 0;
 	}
 
-	return MapDriver(raw_image.data(), param1, param2, free, destroyHeader, mdlMode, PassAllocationAddressAsFirstParam, callback, exitCode);
+	return MapDriver(raw_image.data(), param1, param2, allocType, free, destroyHeader, PassAllocationAddressAsFirstParam, callback, exitCode);
 }
 
-uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, bool free, bool destroyHeader, bool mdlMode, bool PassAllocationAddressAsFirstParam, mapCallback callback, NTSTATUS* exitCode) {
+uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, intel_driver::ALLOCATION_TYPE allocType, bool free, bool destroyHeader, bool PassAllocationAddressAsFirstParam, mapCallback callback, NTSTATUS* exitCode) {
 	Init();
 
 	const PIMAGE_NT_HEADERS64 nt_headers = portable_executable::GetNtHeaders(data);
@@ -136,11 +136,42 @@ uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, bool fr
 
 	uint64_t kernel_image_base = 0;
 	uint64_t mdlptr = 0;
-	if (mdlMode) {
+	switch (allocType) {
+	case intel_driver::ALLOCATION_TYPE::MDL:
+	{
 		kernel_image_base = AllocMdlMemory(image_size, &mdlptr);
+		break;
 	}
-	else {
+	case intel_driver::ALLOCATION_TYPE::StandardPool:
+	{
 		kernel_image_base = intel_driver::AllocatePool(iqvw64e_device_handle, nt::POOL_TYPE::NonPagedPool, image_size);
+		break;
+	}
+	case intel_driver::ALLOCATION_TYPE::Continuous:
+	{
+		LARGE_INTEGER maxAddress = { 0 };
+		maxAddress.QuadPart = MAXULONG64;
+		kernel_image_base = intel_driver::MmAllocateContiguousMemory(iqvw64e_device_handle, image_size, maxAddress);
+		break;
+	}
+	case intel_driver::ALLOCATION_TYPE::LargeContinuous:
+	{
+		size_t pagesToAlloc = image_size / PAGE_2MB_SIZE;
+		pagesToAlloc += image_size % PAGE_2MB_SIZE ? 1 : 0;
+
+		LARGE_INTEGER minAddress = { 0 };
+		LARGE_INTEGER maxAddress = { 0 };
+		maxAddress.QuadPart = MAXULONG64;
+		LARGE_INTEGER addressBoundary = { 0 };
+		addressBoundary.QuadPart = PAGE_2MB_SIZE;
+		kernel_image_base = intel_driver::MmAllocateContiguousMemorySpecifyCacheNode(iqvw64e_device_handle, pagesToAlloc * PAGE_2MB_SIZE, minAddress, maxAddress, addressBoundary);
+		break;
+	}
+	default:
+	{
+		Log("[-] Unsupported memory type allocation: 0x%x", allocType);
+		break;
+	}
 	}
 
 	do {
@@ -216,13 +247,29 @@ uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, bool fr
 
 		Log("[+] DriverEntry returned 0x%x", status);
 
-		if (free && mdlMode) {
-			intel_driver::MmUnmapLockedPages(iqvw64e_device_handle, realBase, mdlptr);
-			intel_driver::MmFreePagesFromMdl(iqvw64e_device_handle, mdlptr);
-			intel_driver::FreePool(iqvw64e_device_handle, mdlptr);
-		}
-		else if (free) {
-			intel_driver::FreePool(iqvw64e_device_handle, realBase);
+		if (free) {
+			switch (allocType) {
+			case intel_driver::ALLOCATION_TYPE::MDL:
+			{
+				intel_driver::MmUnmapLockedPages(iqvw64e_device_handle, realBase, mdlptr);
+				intel_driver::MmFreePagesFromMdl(iqvw64e_device_handle, mdlptr);
+				intel_driver::FreePool(iqvw64e_device_handle, mdlptr);
+				break;
+			}
+			case intel_driver::ALLOCATION_TYPE::StandardPool:
+			{
+				intel_driver::FreePool(iqvw64e_device_handle, realBase);
+				break;
+			}
+			case intel_driver::ALLOCATION_TYPE::Continuous:
+			{
+				break;
+			}
+			case intel_driver::ALLOCATION_TYPE::LargeContinuous:
+			{
+				break;
+			}
+			}
 		}
 
 

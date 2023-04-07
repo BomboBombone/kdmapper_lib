@@ -364,6 +364,46 @@ uint64_t intel_driver::AllocatePool(HANDLE device_handle, nt::POOL_TYPE pool_typ
 	return allocated_pool;
 }
 
+uint64_t intel_driver::MmAllocateContiguousMemory(HANDLE device_handle, SIZE_T NumberOfBytes, LARGE_INTEGER HighestAcceptableAddress)
+{
+	if (!NumberOfBytes)
+		return 0;
+
+	static uint64_t kernel_MmAllocateContiguousMemory = GetKernelModuleExport(device_handle, intel_driver::ntoskrnlAddr, "MmAllocateContiguousMemory");
+
+	if (!kernel_MmAllocateContiguousMemory) {
+		Log("[!] Failed to find MmAllocateContiguousMemory");
+		return 0;
+	}
+
+	uint64_t allocated_pool = 0;
+
+	if (!CallKernelFunction(device_handle, &allocated_pool, kernel_MmAllocateContiguousMemory, NumberOfBytes, HighestAcceptableAddress))
+		return 0;
+
+	return allocated_pool;
+}
+
+uint64_t intel_driver::MmAllocateContiguousMemorySpecifyCacheNode(HANDLE device_handle, SIZE_T NumberOfBytes, LARGE_INTEGER LowestAcceptableAddress, LARGE_INTEGER HighestAcceptableAddress, LARGE_INTEGER BoundaryAddressMultiple, MEMORY_CACHING_TYPE CacheType, ULONG PreferredNode)
+{
+	if (!NumberOfBytes)
+		return 0;
+
+	static uint64_t kernel_MmAllocateContiguousMemorySpecifyCacheNode = GetKernelModuleExport(device_handle, intel_driver::ntoskrnlAddr, "MmAllocateContiguousMemorySpecifyCacheNode");
+
+	if (!kernel_MmAllocateContiguousMemorySpecifyCacheNode) {
+		Log("[!] Failed to find MmAllocateContiguousMemorySpecifyCacheNode");
+		return 0;
+	}
+
+	uint64_t allocated_pool = 0;
+
+	if (!CallKernelFunction(device_handle, &allocated_pool, kernel_MmAllocateContiguousMemorySpecifyCacheNode, NumberOfBytes, LowestAcceptableAddress, HighestAcceptableAddress, BoundaryAddressMultiple, CacheType, PreferredNode))
+		return 0;
+
+	return allocated_pool;
+}
+
 bool intel_driver::FreePool(HANDLE device_handle, uint64_t address) {
 	if (!address)
 		return 0;

@@ -10,6 +10,8 @@
 #include "utils.hpp"
 #include <assert.h>
 
+#define MM_ANY_NODE_OK          0x80000000
+
 namespace intel_driver
 {
 	extern char driver_name[100]; //"iqvw64e.sys"
@@ -104,6 +106,24 @@ namespace intel_driver
 		ULONG CertHash[5];
 	} HashBucketEntry, * PHashBucketEntry;
 
+	typedef enum _ALLOCATION_TYPE {
+		MDL,
+		Continuous,
+		LargeContinuous,
+		StandardPool
+	} ALLOCATION_TYPE, *PALLOCATION_TYPE;
+
+	typedef enum _MEMORY_CACHING_TYPE {
+		MmNonCached,
+		MmCached,
+		MmWriteCombined,
+		MmHardwareCoherentCached,
+		MmNonCachedUnordered,
+		MmUSWCCached,
+		MmMaximumCacheType,
+		MmNotMapped
+	} MEMORY_CACHING_TYPE;
+
 	bool ClearPiDDBCacheTable(HANDLE device_handle);
 	bool ExAcquireResourceExclusiveLite(HANDLE device_handle, PVOID Resource, BOOLEAN wait);
 	bool ExReleaseResourceLite(HANDLE device_handle, PVOID Resource);
@@ -131,6 +151,10 @@ namespace intel_driver
 	bool WriteMemory(HANDLE device_handle, uint64_t address, void* buffer, uint64_t size);
 	bool WriteToReadOnlyMemory(HANDLE device_handle, uint64_t address, void* buffer, uint32_t size);
 	uint64_t AllocatePool(HANDLE device_handle, nt::POOL_TYPE pool_type, uint64_t size);
+
+	uint64_t AllocatePool(HANDLE device_handle, nt::POOL_TYPE pool_type, uint64_t size);
+	uint64_t MmAllocateContiguousMemory(HANDLE device_handle, SIZE_T NumberOfBytes, LARGE_INTEGER HighestAcceptableAddress);
+	uint64_t MmAllocateContiguousMemorySpecifyCacheNode(HANDLE device_handle, SIZE_T NumberOfBytes, LARGE_INTEGER LowestAcceptableAddress, LARGE_INTEGER HighestAcceptableAddress, LARGE_INTEGER BoundaryAddressMultiple, MEMORY_CACHING_TYPE CacheType = MmCached, ULONG PreferredNode = MM_ANY_NODE_OK);
 	/*added by psec*/
 	uint64_t MmAllocatePagesForMdl(HANDLE device_handle, LARGE_INTEGER LowAddress, LARGE_INTEGER HighAddress, LARGE_INTEGER SkipBytes, SIZE_T TotalBytes);
 	uint64_t MmMapLockedPagesSpecifyCache(HANDLE device_handle, uint64_t pmdl, nt::KPROCESSOR_MODE AccessMode, nt::MEMORY_CACHING_TYPE CacheType, uint64_t RequestedAddress, ULONG BugCheckOnFailure, ULONG Priority);
