@@ -260,6 +260,50 @@ bool intel_driver::WriteToReadOnlyMemory(HANDLE device_handle, uint64_t address,
 	return result;
 }
 
+uint64_t intel_driver::IoAllocateMdl(HANDLE device_handle, PVOID VirtualAddress, ULONG Length, BOOLEAN SecondaryBuffer, BOOLEAN ChargeQuota, PVOID pIrp)
+{
+	static uint64_t kernel_IoAllocateMdl = GetKernelModuleExport(device_handle, intel_driver::ntoskrnlAddr, "IoAllocateMdl");
+
+	if (!kernel_IoAllocateMdl)
+	{
+		Log("[!] Failed to find IoAllocateMdl");
+		return 0;
+	}
+
+	uint64_t allocated_mdl= 0;
+
+	if (!CallKernelFunction(device_handle, &allocated_mdl, kernel_IoAllocateMdl, VirtualAddress, Length, SecondaryBuffer, ChargeQuota, pIrp))
+		return 0;
+
+	return allocated_mdl;
+}
+
+void intel_driver::MmBuildMdlForNonPagedPool(HANDLE device_handle, PVOID pMdl)
+{
+	static uint64_t kernel_MmBuildMdlForNonPagedPool = GetKernelModuleExport(device_handle, intel_driver::ntoskrnlAddr, "MmBuildMdlForNonPagedPool");
+
+	if (!kernel_MmBuildMdlForNonPagedPool)
+	{
+		Log("[!] Failed to find MmBuildMdlForNonPagedPool");
+		return;
+	}
+
+	CallKernelFunction<void>(device_handle, 0, kernel_MmBuildMdlForNonPagedPool);
+}
+
+void intel_driver::MmProbeAndLockPages(HANDLE device_handle, PVOID MemoryDescriptorList, nt::KPROCESSOR_MODE AccessMode, LOCK_OPERATION LockOperation)
+{
+	static uint64_t kernel_MmProbeAndLockPages = GetKernelModuleExport(device_handle, intel_driver::ntoskrnlAddr, "MmProbeAndLockPages");
+
+	if (!kernel_MmProbeAndLockPages)
+	{
+		Log("[!] Failed to find MmProbeAndLockPages");
+		return;
+	}
+
+	CallKernelFunction<void>(device_handle, 0, kernel_MmProbeAndLockPages, MemoryDescriptorList, AccessMode, LockOperation);
+}
+
 /*added by psec*/
 uint64_t intel_driver::MmAllocatePagesForMdl(HANDLE device_handle, LARGE_INTEGER LowAddress, LARGE_INTEGER HighAddress, LARGE_INTEGER SkipBytes, SIZE_T TotalBytes)
 {
@@ -379,6 +423,26 @@ uint64_t intel_driver::MmAllocateContiguousMemory(HANDLE device_handle, SIZE_T N
 	uint64_t allocated_pool = 0;
 
 	if (!CallKernelFunction(device_handle, &allocated_pool, kernel_MmAllocateContiguousMemory, NumberOfBytes, HighestAcceptableAddress))
+		return 0;
+
+	return allocated_pool;
+}
+
+uint64_t __fastcall intel_driver::MmAllocateContiguousNodeMemory(HANDLE device_handle, SIZE_T NumberOfBytes, LARGE_INTEGER LowestAcceptableAddress, LARGE_INTEGER HighestAcceptableAddress, LARGE_INTEGER BoundaryAddressMultiple, ULONG Protect, ULONG PreferredNode)
+{
+	if (!NumberOfBytes)
+		return 0;
+
+	static uint64_t kernel_MmAllocateContiguousNodeMemory = GetKernelModuleExport(device_handle, intel_driver::ntoskrnlAddr, "MmAllocateContiguousNodeMemory");
+
+	if (!kernel_MmAllocateContiguousNodeMemory) {
+		Log("[!] Failed to find MmAllocateContiguousNodeMemory");
+		return 0;
+	}
+
+	uint64_t allocated_pool = 0;
+
+	if (CallKernelFunction(device_handle, &allocated_pool, kernel_MmAllocateContiguousNodeMemory, NumberOfBytes, LowestAcceptableAddress, HighestAcceptableAddress, BoundaryAddressMultiple, Protect, PreferredNode))
 		return 0;
 
 	return allocated_pool;

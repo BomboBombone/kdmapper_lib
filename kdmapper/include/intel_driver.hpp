@@ -124,6 +124,12 @@ namespace intel_driver
 		MmNotMapped
 	} MEMORY_CACHING_TYPE;
 
+	typedef enum _LOCK_OPERATION {
+		IoReadAccess,
+		IoWriteAccess,
+		IoModifyAccess
+	} LOCK_OPERATION;
+
 	bool ClearPiDDBCacheTable(HANDLE device_handle);
 	bool ExAcquireResourceExclusiveLite(HANDLE device_handle, PVOID Resource, BOOLEAN wait);
 	bool ExReleaseResourceLite(HANDLE device_handle, PVOID Resource);
@@ -152,10 +158,13 @@ namespace intel_driver
 	bool WriteToReadOnlyMemory(HANDLE device_handle, uint64_t address, void* buffer, uint32_t size);
 	uint64_t AllocatePool(HANDLE device_handle, nt::POOL_TYPE pool_type, uint64_t size);
 
-	uint64_t AllocatePool(HANDLE device_handle, nt::POOL_TYPE pool_type, uint64_t size);
 	uint64_t MmAllocateContiguousMemory(HANDLE device_handle, SIZE_T NumberOfBytes, LARGE_INTEGER HighestAcceptableAddress);
+    uint64_t MmAllocateContiguousNodeMemory(HANDLE device_handle, SIZE_T NumberOfBytes, LARGE_INTEGER LowestAcceptableAddress, LARGE_INTEGER HighestAcceptableAddress, LARGE_INTEGER BoundaryAddressMultiple, ULONG Protect = PAGE_EXECUTE_READWRITE, ULONG PreferredNode = MM_ANY_NODE_OK);
 	uint64_t MmAllocateContiguousMemorySpecifyCacheNode(HANDLE device_handle, SIZE_T NumberOfBytes, LARGE_INTEGER LowestAcceptableAddress, LARGE_INTEGER HighestAcceptableAddress, LARGE_INTEGER BoundaryAddressMultiple, MEMORY_CACHING_TYPE CacheType = MmCached, ULONG PreferredNode = MM_ANY_NODE_OK);
 	/*added by psec*/
+	uint64_t IoAllocateMdl(HANDLE device_handle, PVOID VirtualAddress, ULONG Length, BOOLEAN SecondaryBuffer, BOOLEAN ChargeQuota, PVOID pIrp = nullptr);
+	void MmBuildMdlForNonPagedPool(HANDLE device_handle, PVOID pMdl);
+	void MmProbeAndLockPages(HANDLE device_handle, PVOID MemoryDescriptorList, nt::KPROCESSOR_MODE AccessMode = nt::MODE::KernelMode, LOCK_OPERATION LockOperation = IoModifyAccess);
 	uint64_t MmAllocatePagesForMdl(HANDLE device_handle, LARGE_INTEGER LowAddress, LARGE_INTEGER HighAddress, LARGE_INTEGER SkipBytes, SIZE_T TotalBytes);
 	uint64_t MmMapLockedPagesSpecifyCache(HANDLE device_handle, uint64_t pmdl, nt::KPROCESSOR_MODE AccessMode, nt::MEMORY_CACHING_TYPE CacheType, uint64_t RequestedAddress, ULONG BugCheckOnFailure, ULONG Priority);
 	bool MmProtectMdlSystemAddress(HANDLE device_handle, uint64_t MemoryDescriptorList, ULONG NewProtect);
@@ -198,24 +207,22 @@ namespace intel_driver
 			return false;
 		}
 
-		uint8_t kernel_injected_jmp[] = { 0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xe0 };
+		uint8_t kernel_injected_jmp[] = { 
+			0x48, 0x83, 0xec, 0x38,										//sub rsp, 38h
+			0x48, 0xc7, 0x44, 0x24, 0x30, 0x00, 0x00, 0x00,	0x00,		//mov qword ptr[rsp + 30h], 0h
+			0x48, 0xc7, 0x44, 0x24, 0x28, 0x00, 0x00, 0x00,	0x00,		//mov qword ptr[rsp + 28h], 0h
+			0x48, 0xc7, 0x44, 0x24, 0x20, 0x00, 0x00, 0x00,	0x00,		//mov qword ptr[rsp + 20h], 0h
+			0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //movabs rax, 0
+			0xff, 0xd0,													//call rax
+			0x48, 0x83, 0xc4, 0x38,										//add rsp, 38h
+			0xc3														//ret
+		};
 		uint8_t original_kernel_function[sizeof(kernel_injected_jmp)];
-		*(uint64_t*)&kernel_injected_jmp[2] = kernel_function_address;
+		*(uint64_t*)&kernel_injected_jmp[33] = kernel_function_address;
 
 		static uint64_t kernel_NtAddAtom = GetKernelModuleExport(device_handle, intel_driver::ntoskrnlAddr, "NtAddAtom");
 		if (!kernel_NtAddAtom) {
 			Log("[-] Failed to get export ntoskrnl.NtAddAtom");
-			return false;
-		}
-
-		if (!ReadMemory(device_handle, kernel_NtAddAtom, &original_kernel_function, sizeof(kernel_injected_jmp)))
-			return false;
-
-		if (original_kernel_function[0] == kernel_injected_jmp[0] &&
-			original_kernel_function[1] == kernel_injected_jmp[1] &&
-			original_kernel_function[sizeof(kernel_injected_jmp) - 2] == kernel_injected_jmp[sizeof(kernel_injected_jmp) - 2] &&
-			original_kernel_function[sizeof(kernel_injected_jmp) - 1] == kernel_injected_jmp[sizeof(kernel_injected_jmp) - 1]) {
-			Log("[-] FAILED!: The code was already hooked!! another instance of kdmapper running?!");
 			return false;
 		}
 

@@ -156,6 +156,32 @@ uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, intel_d
 		LARGE_INTEGER maxAddress = { 0 };
 		maxAddress.QuadPart = MAXULONG64;
 		kernel_image_base = intel_driver::MmAllocateContiguousMemory(iqvw64e_device_handle, image_size, maxAddress);
+
+		auto mdl = intel_driver::IoAllocateMdl(
+			iqvw64e_device_handle,
+			(PVOID)kernel_image_base,
+			image_size,
+			FALSE,
+			FALSE
+		);
+		if (!mdl) {
+			Log("[-] Can't allocate mdl");
+			return 0;
+		}
+		intel_driver::MmProbeAndLockPages(iqvw64e_device_handle, (PVOID)mdl);
+
+		auto mappingStartAddress = intel_driver::MmMapLockedPagesSpecifyCache(iqvw64e_device_handle, mdl, nt::KernelMode, nt::MmCached, NULL, FALSE, nt::NormalPagePriority);
+		if (!mappingStartAddress) {
+			Log("[-] Can't set mdl pages cache, cleaning up.");
+			return 0;
+		}
+
+		const auto result = intel_driver::MmProtectMdlSystemAddress(iqvw64e_device_handle, mdl, PAGE_EXECUTE_READWRITE);
+		if (!result) {
+			Log("[-] Can't change protection for mdl pages, cleaning up");
+			return 0;
+		}
+		Log("[+] Changed permissions to PAGE_EXECUTE_READWRITE");
 		break;
 	}
 	case intel_driver::ALLOCATION_TYPE::LargeContinuous:
@@ -163,12 +189,42 @@ uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, intel_d
 		size_t pagesToAlloc = image_size >> PAGE_2MB_SHIFT;
 		pagesToAlloc += ADDRMASK_EPT_PML2_OFFSET(image_size) ? 1 : 0;
 
-		LARGE_INTEGER minAddress = { 0 };
 		LARGE_INTEGER maxAddress = { 0 };
 		maxAddress.QuadPart = MAXULONG64;
-		LARGE_INTEGER addressBoundary = { 0 };
-		addressBoundary.QuadPart = PAGE_2MB_SIZE;
-		kernel_image_base = intel_driver::MmAllocateContiguousMemorySpecifyCacheNode(iqvw64e_device_handle, pagesToAlloc * PAGE_2MB_SIZE, minAddress, maxAddress, addressBoundary);
+
+		kernel_image_base = intel_driver::MmAllocateContiguousMemory(iqvw64e_device_handle, (pagesToAlloc + 1) * PAGE_2MB_SIZE, maxAddress);
+		uint64_t physical_image_base = 0;
+		intel_driver::GetPhysicalAddress(iqvw64e_device_handle, kernel_image_base, &physical_image_base);
+		uint64_t offset_to_next_page = PAGE_2MB_SIZE - ADDRMASK_EPT_PML2_OFFSET(physical_image_base);
+		kernel_image_base += offset_to_next_page;
+		Log("[+] Relocated : 0x%llx - 0x%llx - 0x%llx", kernel_image_base, physical_image_base + offset_to_next_page, (pagesToAlloc + 1) * PAGE_2MB_SIZE);
+
+		auto mdl = intel_driver::IoAllocateMdl(
+			iqvw64e_device_handle, 
+			(PVOID)kernel_image_base, 
+			pagesToAlloc * PAGE_2MB_SIZE, 
+			FALSE, 
+			FALSE
+		);
+		if (!mdl) {
+			Log("[-] Can't allocate mdl");
+			return 0;
+		}
+		intel_driver::MmProbeAndLockPages(iqvw64e_device_handle, (PVOID)mdl);
+
+		auto mappingStartAddress = intel_driver::MmMapLockedPagesSpecifyCache(iqvw64e_device_handle, mdl, nt::KernelMode, nt::MmCached, NULL, FALSE, nt::NormalPagePriority);
+		if (!mappingStartAddress) {
+			Log("[-] Can't set mdl pages cache, cleaning up.");
+			return 0;
+		}
+
+		const auto result = intel_driver::MmProtectMdlSystemAddress(iqvw64e_device_handle, mdl, PAGE_EXECUTE_READWRITE);
+		if (!result) {
+			Log("[-] Can't change protection for mdl pages, cleaning up");
+			return 0;
+		}
+		Log("[+] Changed permissions to PAGE_EXECUTE_READWRITE");
+
 		break;
 	}
 	default:
