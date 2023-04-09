@@ -226,6 +226,9 @@ namespace intel_driver
 			return false;
 		}
 
+		if (!ReadMemory(device_handle, kernel_NtAddAtom, &original_kernel_function, sizeof(kernel_injected_jmp)))
+			return false;
+
 		// Overwrite the pointer with kernel_function_address
 		if (!WriteToReadOnlyMemory(device_handle, kernel_NtAddAtom, &kernel_injected_jmp, sizeof(kernel_injected_jmp)))
 			return false;
@@ -245,7 +248,6 @@ namespace intel_driver
 		}
 
 		// Restore the pointer/jmp
-		WriteToReadOnlyMemory(device_handle, kernel_NtAddAtom, original_kernel_function, sizeof(kernel_injected_jmp));
-		return true;
+		return WriteToReadOnlyMemory(device_handle, kernel_NtAddAtom, original_kernel_function, sizeof(kernel_injected_jmp));
 	}
 }
