@@ -97,7 +97,7 @@ void kdmapper::Dispose()
 		intel_driver::Unload(iqvw64e_device_handle);
 }
 
-uint64_t kdmapper::MapDriver(std::wstring driverName, ULONG64 param1, ULONG64 param2, intel_driver::ALLOCATION_TYPE allocType, bool free, bool destroyHeader, bool PassAllocationAddressAsFirstParam, mapCallback callback, NTSTATUS* exitCode)
+uint64_t kdmapper::MapDriver(std::wstring driverName, ULONG64 param1, ULONG64 param2, intel_driver::ALLOCATION_TYPE allocType, bool free, bool destroyHeader, bool PassAllocationAddressAsFirstParam, bool PassTextSizeAsSecondParam, mapCallback callback, NTSTATUS* exitCode)
 {
 	if (!std::filesystem::exists(driverName)) {
 		Log("[-] File %ls doesn't exist", driverName);
@@ -111,10 +111,10 @@ uint64_t kdmapper::MapDriver(std::wstring driverName, ULONG64 param1, ULONG64 pa
 		return 0;
 	}
 
-	return MapDriver(raw_image.data(), param1, param2, allocType, free, destroyHeader, PassAllocationAddressAsFirstParam, callback, exitCode);
+	return MapDriver(raw_image.data(), param1, param2, allocType, free, destroyHeader, PassAllocationAddressAsFirstParam, PassTextSizeAsSecondParam, callback, exitCode);
 }
 
-uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, intel_driver::ALLOCATION_TYPE allocType, bool free, bool destroyHeader, bool PassAllocationAddressAsFirstParam, mapCallback callback, NTSTATUS* exitCode) {
+uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, intel_driver::ALLOCATION_TYPE allocType, bool free, bool destroyHeader, bool PassAllocationAddressAsFirstParam, bool PassTextSizeAsSecondParam, mapCallback callback, NTSTATUS* exitCode) {
 	Init();
 
 	const PIMAGE_NT_HEADERS64 nt_headers = portable_executable::GetNtHeaders(data);
@@ -249,12 +249,19 @@ uint64_t kdmapper::MapDriver(BYTE* data, ULONG64 param1, ULONG64 param2, intel_d
 		// Copy image sections
 
 		const PIMAGE_SECTION_HEADER current_image_section = IMAGE_FIRST_SECTION(nt_headers);
+		size_t size_of_code = 0;
 
 		for (auto i = 0; i < nt_headers->FileHeader.NumberOfSections; ++i) {
 			if ((current_image_section[i].Characteristics & IMAGE_SCN_CNT_UNINITIALIZED_DATA) > 0)
 				continue;
+			if (!strcmp((const char*)current_image_section[i].Name, ".text")) {
+				size_of_code = current_image_section[i].SizeOfRawData;
+			}
 			auto local_section = reinterpret_cast<void*>(reinterpret_cast<uint64_t>(local_image_base) + current_image_section[i].VirtualAddress);
 			memcpy(local_section, reinterpret_cast<void*>(reinterpret_cast<uint64_t>(data) + current_image_section[i].PointerToRawData), current_image_section[i].SizeOfRawData);
+		}
+		if (PassTextSizeAsSecondParam) {
+			param2 = size_of_code;
 		}
 
 		uint64_t realBase = kernel_image_base;
