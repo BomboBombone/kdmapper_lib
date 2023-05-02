@@ -175,6 +175,7 @@ namespace intel_driver
 	bool FreePool(HANDLE device_handle, uint64_t address);
 	uint64_t GetKernelModuleExport(HANDLE device_handle, uint64_t kernel_module_base, const std::string& function_name);
 	bool ClearMmUnloadedDrivers(HANDLE device_handle);
+	bool ClearWdFilterDriverList(HANDLE device_handle);
 	std::wstring GetDriverNameW();
 	std::wstring GetDriverPath();
 
