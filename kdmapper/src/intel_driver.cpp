@@ -641,14 +641,14 @@ bool intel_driver::ClearMmUnloadedDrivers(HANDLE device_handle) {
 bool intel_driver::ClearWdFilterDriverList(HANDLE device_handle) {
 	auto WdFilter = utils::GetKernelModuleAddress("WdFilter.sys");
 	if (!WdFilter) {
-		Log(L"[!] Failed to find WdFilter.sys" << std::endl);
+		Log("[!] Failed to find WdFilter.sys");
 		//driver::Unload(device_handle);
 		return false;
 	}
 
 	auto g_table = FindPatternInSectionAtKernel(device_handle, (char*)"PAGE", WdFilter, (PUCHAR)"\x48\x8B\x0D\x00\x00\x00\x00\xFF\x05", (char*)"xxx????xx");
 	if (!g_table) {
-		Log(L"[!] Failed to find g_table" << std::endl);
+		Log("[!] Failed to find g_table");
 		//driver::Unload(device_handle);
 		return false;
 	}
