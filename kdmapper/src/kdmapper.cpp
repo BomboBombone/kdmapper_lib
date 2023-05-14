@@ -99,8 +99,9 @@ void kdmapper::Dispose()
 
 uint64_t kdmapper::MapDriver(std::wstring driverName, ULONG64 param1, ULONG64 param2, intel_driver::ALLOCATION_TYPE allocType, bool free, bool destroyHeader, bool PassAllocationAddressAsFirstParam, bool PassTextSizeAsSecondParam, mapCallback callback, NTSTATUS* exitCode)
 {
-	if (!std::filesystem::exists(driverName)) {
-		Log("[-] File %ls doesn't exist", driverName);
+	if (INVALID_FILE_ATTRIBUTES == GetFileAttributesW(driverName.c_str()) && GetLastError() == ERROR_FILE_NOT_FOUND)
+	{
+		Log("[-] File %ls doesn't exist", driverName.c_str());
 		return 0;
 	}
 

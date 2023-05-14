@@ -104,8 +104,8 @@ HANDLE intel_driver::Load() {
 
 	if (!intel_driver::ClearWdFilterDriverList(result)) {
 		Log("[!] Failed to ClearWdFilterDriverList");
-		intel_driver::Unload(result);
-		return INVALID_HANDLE_VALUE;
+		//intel_driver::Unload(result);
+		//return INVALID_HANDLE_VALUE;
 	}
 
 	return result;
