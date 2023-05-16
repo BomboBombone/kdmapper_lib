@@ -687,6 +687,7 @@ bool intel_driver::ClearWdFilterDriverList(HANDLE device_handle) {
 				}
 			}
 
+			Log("[+] WdFilterDriverList Cleaned: %x", ImageName);
 			delete[] ImageName;
 		}
 	}
