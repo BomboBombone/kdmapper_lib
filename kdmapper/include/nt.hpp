@@ -14,24 +14,24 @@ namespace nt
 	
 	typedef NTSTATUS(*NtLoadDriver)(PUNICODE_STRING DriverServiceName);
 	typedef NTSTATUS(*NtUnloadDriver)(PUNICODE_STRING DriverServiceName);
-	typedef NTSTATUS(*RtlAdjustPrivilege)(_In_ ULONG Privilege, _In_ BOOLEAN Enable, _In_ BOOLEAN Client, _Out_ PBOOLEAN WasEnabled);
+	typedef NTSTATUS(*RtlAdjustPrivilege)(_In_ DWORD32 Privilege, _In_ BOOLEAN Enable, _In_ BOOLEAN Client, _Out_ PBOOLEAN WasEnabled);
 
 	typedef struct _SYSTEM_HANDLE
 	{
 		PVOID Object;
 		HANDLE UniqueProcessId;
 		HANDLE HandleValue;
-		ULONG GrantedAccess;
+		DWORD32 GrantedAccess;
 		USHORT CreatorBackTraceIndex;
 		USHORT ObjectTypeIndex;
-		ULONG HandleAttributes;
-		ULONG Reserved;
+		DWORD32 HandleAttributes;
+		DWORD32 Reserved;
 	} SYSTEM_HANDLE, *PSYSTEM_HANDLE;
 
 	typedef struct _SYSTEM_HANDLE_INFORMATION_EX
 	{
-		ULONG_PTR HandleCount;
-		ULONG_PTR Reserved;
+		DWORD64 HandleCount;
+		DWORD64 Reserved;
 		SYSTEM_HANDLE Handles[1];
 	} SYSTEM_HANDLE_INFORMATION_EX, *PSYSTEM_HANDLE_INFORMATION_EX;
 
@@ -67,8 +67,8 @@ namespace nt
 		HANDLE Section;
 		PVOID MappedBase;
 		PVOID ImageBase;
-		ULONG ImageSize;
-		ULONG Flags;
+		DWORD32 ImageSize;
+		DWORD32 Flags;
 		USHORT LoadOrderIndex;
 		USHORT InitOrderIndex;
 		USHORT LoadCount;
@@ -78,7 +78,7 @@ namespace nt
 
 	typedef struct _RTL_PROCESS_MODULES
 	{
-		ULONG NumberOfModules;
+		DWORD32 NumberOfModules;
 		RTL_PROCESS_MODULE_INFORMATION Modules[1];
 	} RTL_PROCESS_MODULES, *PRTL_PROCESS_MODULES;
 
