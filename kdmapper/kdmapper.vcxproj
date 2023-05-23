@@ -55,6 +55,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
       <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
