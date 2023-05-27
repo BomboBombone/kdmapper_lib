@@ -106,7 +106,7 @@ uint64_t kdmapper::MapDriver(std::wstring driverName, ULONG64 param1, ULONG64 pa
 	}
 
 	std::vector<uint8_t> raw_image = { 0 };
-	if (!utils::ReadFileToMemory(driverName, &raw_image)) {
+	if (!kdmapper_utils::ReadFileToMemory(driverName, &raw_image)) {
 		Log("[-] Failed to read image to memory");
 		Dispose();
 		return 0;
@@ -368,7 +368,7 @@ void RelocateImageByDelta(portable_executable::vec_relocs relocs, const uint64_t
 
 bool ResolveImports(portable_executable::vec_imports imports) {
 	for (const auto& current_import : imports) {
-		ULONG64 Module = utils::GetKernelModuleAddress(current_import.module_name);
+		ULONG64 Module = kdmapper_utils::GetKernelModuleAddress(current_import.module_name);
 		if (!Module) {
 #if !defined(_DEBUG)
 			std::cout << "[-] Dependency " << current_import.module_name << " wasn't found" << std::endl;

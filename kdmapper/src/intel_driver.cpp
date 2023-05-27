@@ -12,7 +12,7 @@ std::wstring intel_driver::GetDriverNameW() {
 }
 
 std::wstring intel_driver::GetDriverPath() {
-	std::wstring temp = utils::GetFullTempPath();
+	std::wstring temp = kdmapper_utils::GetFullTempPath();
 	if (temp.empty()) {
 		return L"";
 	}
@@ -57,7 +57,7 @@ HANDLE intel_driver::Load() {
 
 	_wremove(driver_path.c_str());
 
-	if (!utils::CreateFileFromMemory(driver_path, reinterpret_cast<const char*>(intel_driver_resource::driver), sizeof(intel_driver_resource::driver))) {
+	if (!kdmapper_utils::CreateFileFromMemory(driver_path, reinterpret_cast<const char*>(intel_driver_resource::driver), sizeof(intel_driver_resource::driver))) {
 		Log("[-] Failed to create vulnerable driver file");
 		return INVALID_HANDLE_VALUE;
 	}
@@ -77,7 +77,7 @@ HANDLE intel_driver::Load() {
 		return INVALID_HANDLE_VALUE;
 	}
 
-	ntoskrnlAddr = utils::GetKernelModuleAddress("ntoskrnl.exe");
+	ntoskrnlAddr = kdmapper_utils::GetKernelModuleAddress("ntoskrnl.exe");
 	if (ntoskrnlAddr == 0) {
 		Log("[-] Failed to get ntoskrnl.exe");
 		intel_driver::Unload(result);
@@ -639,7 +639,7 @@ bool intel_driver::ClearMmUnloadedDrivers(HANDLE device_handle) {
 }
 
 bool intel_driver::ClearWdFilterDriverList(HANDLE device_handle) {
-	auto WdFilter = utils::GetKernelModuleAddress("WdFilter.sys");
+	auto WdFilter = kdmapper_utils::GetKernelModuleAddress("WdFilter.sys");
 	if (!WdFilter) {
 		Log("[!] Failed to find WdFilter.sys");
 		//driver::Unload(device_handle);
@@ -896,7 +896,7 @@ uintptr_t intel_driver::FindPatternAtKernel(HANDLE device_handle, uintptr_t dwAd
 		return 0;
 	}
 
-	auto result = utils::FindPattern((uintptr_t)sectionData, dwLen, bMask, szMask);
+	auto result = kdmapper_utils::FindPattern((uintptr_t)sectionData, dwLen, bMask, szMask);
 
 	if (result <= 0) {
 		Log("[-] Can't find pattern");
@@ -917,7 +917,7 @@ uintptr_t intel_driver::FindSectionAtKernel(HANDLE device_handle, char* sectionN
 		return 0;
 	}
 	ULONG sectionSize = 0;
-	uintptr_t section = (uintptr_t)utils::FindSection(sectionName, (uintptr_t)headers, &sectionSize);
+	uintptr_t section = (uintptr_t)kdmapper_utils::FindSection(sectionName, (uintptr_t)headers, &sectionSize);
 	if (!section || !sectionSize) {
 		Log("[-] Can't find section");
 		return 0;
@@ -934,7 +934,7 @@ uintptr_t intel_driver::FindPatternInSectionAtKernel(HANDLE device_handle, char*
 }
 
 bool intel_driver::ClearKernelHashBucketList(HANDLE device_handle) {
-	uint64_t ci = utils::GetKernelModuleAddress("ci.dll");
+	uint64_t ci = kdmapper_utils::GetKernelModuleAddress("ci.dll");
 	if (!ci) {
 		Log("[-] Can't Find ci.dll module address");
 		return false;

@@ -13,7 +13,7 @@
 
 #include "nt.hpp"
 
-namespace utils
+namespace kdmapper_utils
 {
 	std::wstring GetFullTempPath();
 	bool ReadFileToMemory(const std::wstring& file_path, std::vector<uint8_t>* out_buffer);
