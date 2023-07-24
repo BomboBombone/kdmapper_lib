@@ -659,7 +659,7 @@ bool intel_driver::ClearWdFilterDriverList(HANDLE device_handle) {
 	auto ReadListEntry = [&](uintptr_t Address) -> LIST_ENTRY*
 	{
 		LIST_ENTRY* Entry;
-		if (!ReadMemory(device_handle, Address, &Entry, sizeof(LIST_ENTRY))) return 0;
+		if (!ReadMemory(device_handle, Address, &Entry, sizeof(LIST_ENTRY*))) return 0;
 		return Entry;
 	};
 
